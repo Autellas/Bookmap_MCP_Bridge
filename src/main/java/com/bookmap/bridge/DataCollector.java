@@ -1,8 +1,6 @@
 package com.bookmap.bridge;
 
 import velox.api.layer1.data.TradeInfo;
-import velox.api.layer1.simplified.TradeDataListener;
-import velox.api.layer1.simplified.DepthDataListener;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -10,14 +8,16 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 /**
- * Collects live market data from Bookmap data streams.
+ * Collects live market data from Bookmap data streams (Core API).
  * 
  * Tracks:
  * - Trade events (volume dots)
  * - Order book depth (absorption proxy)
  * - Best bid/ask (for VWAP proximity)
+ * 
+ * Thread-Safety: Uses concurrent collections for scheduler access.
  */
-public class DataCollector implements TradeDataListener, DepthDataListener {
+public class DataCollector {
 
     private static final Logger log = Logger.getLogger(DataCollector.class.getName());
     private static final int MAX_TRADES = 200;
@@ -55,8 +55,11 @@ public class DataCollector implements TradeDataListener, DepthDataListener {
 
     // ─── Trade Events (Volume Dots) ──────────────────────────────────────────
 
-    @Override
-    public void onTrade(double price, int size, TradeInfo tradeInfo) {
+    /**
+     * Core API signature: includes instrument alias.
+     * Called by BookmapBridge in Bookmap event thread.
+     */
+    public void onTrade(String alias, double price, int size, TradeInfo tradeInfo) {
         lastPrice.set(price);
 
         // Determine trade direction: TradeInfo.isBidAggressor
@@ -86,8 +89,11 @@ public class DataCollector implements TradeDataListener, DepthDataListener {
 
     // ─── Order Book Updates ───────────────────────────────────────────────────
 
-    @Override
-    public void onDepth(boolean isBid, int price, int size) {
+    /**
+     * Core API signature: includes instrument alias.
+     * Called by BookmapBridge in Bookmap event thread.
+     */
+    public void onDepth(String alias, boolean isBid, int price, int size) {
         // Convert price level (int) to double
         double priceDouble = (double) price;
 

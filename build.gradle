@@ -22,6 +22,15 @@ dependencies {
 
     // JSON serialization
     implementation 'com.google.code.gson:gson:2.10.1'
+
+    // Testing
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+    testImplementation 'org.mockito:mockito-core:5.8.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.8.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    
+    // Make Bookmap API available for tests (compile and runtime)
+    testImplementation fileTree(dir: 'libs', include: ['*.jar'])
 }
 
 jar {
@@ -55,4 +64,13 @@ task deployToBookmap(type: Copy, dependsOn: shadowJar) {
 // Quick rebuild + deploy
 task buildAndDeploy(dependsOn: [shadowJar, deployToBookmap]) {
     description = 'Build fat JAR and deploy to Bookmap addons directory'
+}
+
+// Test configuration
+test {
+    useJUnitPlatform()
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
 }
