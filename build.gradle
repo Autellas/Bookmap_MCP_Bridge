@@ -1,0 +1,58 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'com.bookmap.bridge'
+version = '1.0.0'
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
+repositories {
+    mavenCentral()
+    // Bookmap SDK - add local path or Maven coordinates here
+    flatDir {
+        dirs 'libs'  // place bookmap-api.jar in java-bridge/libs/
+    }
+}
+
+dependencies {
+    // Bookmap SDK (place bookmap-api.jar into java-bridge/libs/)
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+
+    // JSON serialization
+    implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'com.bookmap.bridge.BookmapBridge',
+            'Implementation-Title': 'MCP Trading Bridge',
+            'Implementation-Version': version
+        )
+    }
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    // Exclude Bookmap SDK from fat-jar (already on Bookmap classpath)
+    dependencies {
+        exclude(dependency { it.moduleGroup == 'velox' })
+    }
+}
+
+// Copy output JAR to Bookmap addons directory (DEV environment)
+task deployToBookmap(type: Copy, dependsOn: shadowJar) {
+    def bookmapAddonsDir = System.getenv('BOOKMAP_ADDONS_DIR') ?:
+        'C:\\BookmapData_DEV\\addons\\Trading_Agenten'
+
+    from shadowJar.archiveFile
+    into bookmapAddonsDir
+    println "Deploying to: ${bookmapAddonsDir}"
+}
+
+// Quick rebuild + deploy
+task buildAndDeploy(dependsOn: [shadowJar, deployToBookmap]) {
+    description = 'Build fat JAR and deploy to Bookmap addons directory'
+}
